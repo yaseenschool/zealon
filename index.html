@@ -272,7 +272,8 @@ function clone(o){return JSON.parse(JSON.stringify(o))}
 function pad(n){n=String(n);while(n.length<3)n="0"+n;return n}
 function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}}
 function toast(m){var t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(function(){t.classList.remove("on")},2600)}
-function vals(o){return o?Object.keys(o).map(function(k){return o[k]}):[]}
+function vals(o){return o?Object.keys(o).map(function(k){return o[k]}).filter(function(v){return v!=null}):[]}
+function toObj(o){ var r={}; if(!o) return r; Object.keys(o).forEach(function(k){ if(o[k]!=null) r[k]=o[k]; }); return r; }
 function slug(s){return String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")}
 function guessTeam(ch){var d=String(ch||"").charAt(0);return d==="1"?"AURA":d==="2"?"PRISM":d==="3"?"NOVA":""}
 function teamLogo(id){return LOGO[id]||""}
@@ -289,7 +290,10 @@ function normalise(d){
   d = d||{};
   d.settings = d.settings||{}; d.settings.pts = d.settings.pts||{"1":10,"2":7,"3":4};
   if(!d.settings.onStage) d.settings.onStage = "2026-11-21";
-  d.students = d.students||{}; d.results = d.results||{}; d.events = d.events||{}; d.entries = d.entries||{};
+  /* Firebase returns objects with number keys (chest numbers) as arrays with gaps: turn them back into objects */
+  d.students = toObj(d.students); d.results = toObj(d.results); d.events = toObj(d.events); d.entries = toObj(d.entries);
+  var pp = d.settings.pts; d.settings.pts = {"1":+(pp[1]||pp["1"]||0),"2":+(pp[2]||pp["2"]||0),"3":+(pp[3]||pp["3"]||0)};
+  vals(d.results).forEach(function(r){ r.winners = vals(r.winners); });
   Object.keys(d.entries).forEach(function(k){ var e=d.entries[k]||{}; e.list = Array.isArray(e.list)? e.list.filter(Boolean) : vals(e.list); d.entries[k]=e; });
   vals(d.results).forEach(function(r){ r.winners = (r.winners||[]).filter(Boolean); });
   /* older copies kept Buds and Blooms together as "Buds: …" / "Blooms: …" */
