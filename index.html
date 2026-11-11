@@ -6,6 +6,17 @@
 <title>ZEALON Arts Fest · Pento Edition</title>
 <meta name="description" content="ZEALON Arts Fest – Pento Edition. Results and team points of Yaseen Islamia English Medium School, Maidan, Gagrian.">
 <meta name="theme-color" content="#23266a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ZEALON">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta property="og:title" content="ZEALON Arts Fest – Pento Edition · Live Results">
+<meta property="og:description" content="Live results, team points and programmes – Yaseen Islamia English Medium School.">
+<meta property="og:image" content="https://yaseenschool.github.io/zealon/icon-512.png">
+<meta property="og:url" content="https://yaseenschool.github.io/zealon/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Poppins:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700&family=Roboto+Condensed:wght@400;500;700&family=Roboto+Slab:wght@300;400;500&display=swap" rel="stylesheet">
@@ -422,6 +433,7 @@ function renderHome(){
     '<div class="edition">Pento Edition</div></div></div>'+
     '<div class="mu mt">Off-stage competitions are going on now. On-stage day: <b style="color:var(--ink)">'+fmtDate(S.settings.onStage)+'</b>'+(S.settings.venue?' · '+esc(S.settings.venue):'')+'</div>'+
     countdownHTML()+'</div>';
+  h += installCardHTML();
   h += '<div class="card mt"><div class="row" style="margin-bottom:10px"><h2 style="margin:0" class="sp">Team Standings</h2><button class="btn sm lt" id="ptPoster">Points poster</button></div>'+standingsHTML(t)+
     '<div class="stats mt"><div class="stat"><b>'+all.length+'</b><span>Results</span></div><div class="stat"><b>'+Object.keys(winners).length+'</b><span>Prize winners</span></div><div class="stat"><b>'+vals(S.events).length+'</b><span>Events</span></div></div></div>';
   var nOn = vals(S.events).filter(function(e){return e.stage==="on"}).length;
@@ -431,6 +443,8 @@ function renderHome(){
   h += '</div>';
   $("#v-home").innerHTML = h;
   $("#ptPoster").onclick = function(){ openPointsPoster(); };
+  if($("#instBtn")) $("#instBtn").onclick = doInstall;
+  if($("#instX")) $("#instX").onclick = function(){ ls("zl-inst-hide","1"); renderHome(); };
   tickCountdown();
 }
 function fmtDate(d){ if(!d) return "–"; var x=new Date(d+"T00:00:00"); return isNaN(x)?d:x.toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"}); }
@@ -764,15 +778,12 @@ function pointsPoster(){
     var t=totals(), rk=ranked(t), n=maxNo(), th=PT_THEMES[n%PT_THEMES.length], top=754;
     c.fillStyle="#fff"; c.fillRect(0,0,W,H);
     c.fillStyle=th[0]; c.fillRect(0,0,W,top);
-    /* rays */
     c.save(); c.beginPath(); c.rect(0,0,W,top); c.clip(); c.strokeStyle=th[1]; c.globalAlpha=.55;
     for(var i=0;i<16;i++){ var a=i/16*Math.PI*2+.1; c.lineWidth=16+(i%3)*8; c.beginPath(); c.moveTo(745,507); c.lineTo(745+Math.cos(a)*1500,507+Math.sin(a)*1500); c.stroke(); }
     c.restore(); c.globalAlpha=1;
     c.fillStyle="#f6b91a"; c.fillRect(0,top,W,22);
-    /* title */
     c.fillStyle="rgba(255,220,225,.9)"; c.font="400 20px 'Courier New', monospace"; c.textAlign="center";
     var title="Zealon Arts Festival "+String(S.settings.onStage||"2026").slice(0,4); c.fillText(title.split("").join(String.fromCharCode(8202)+" "), 520, 155); c.textAlign="left";
-    /* magnifier */
     var Y="#f6b91a", cx=745, cy=507;
     c.strokeStyle=Y; c.lineCap="round";
     c.lineWidth=24; c.beginPath(); c.arc(cx,cy,232,0,7); c.stroke();
@@ -788,7 +799,6 @@ function pointsPoster(){
     c.save(); c.translate(cx,cy); c.rotate(-0.29*Math.PI);
     c.fillStyle="#fff"; c.font="300 80px "+FS; c.textAlign="center"; c.fillText("After",12,-2);
     c.fillStyle=Y; c.font="500 88px "+FS; c.fillText(String(n),34,78); c.restore(); c.textAlign="left";
-    /* scores */
     var cols=["#f6b91a","#f8cf5a","#fde9b8"];
     rk.forEach(function(x,i){
       var yy=385+i*116;
@@ -796,7 +806,6 @@ function pointsPoster(){
       var w=Math.max(c.measureText(String(x.pts)).width, 110);
       c.fillStyle="#fff"; c.font="300 40px "+FS; c.fillText(x.id,140+w+34,yy-14);
     });
-    /* bottom */
     if(L.p_dci) c.drawImage(L.p_dci,178,876,380,136);
     if(L.p_zl) c.drawImage(L.p_zl,727,898,128,190);
     if(L.p_school) c.drawImage(L.p_school,181,1043,522,33);
@@ -1112,6 +1121,27 @@ function adminSettings(b){
   function cmsg(t,c){ $("#cmsg").innerHTML='<div class="note '+(c||"")+'">'+t+'</div>'; }
 }
 function dl(blob, name){ var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href); a.remove();},1500); }
+
+/* ---------- app install ---------- */
+var installEvt = null;
+function isStandalone(){ return (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true; }
+function isIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent); }
+function installCardHTML(){
+  if(isStandalone() || ls("zl-inst-hide")) return "";
+  if(!installEvt && !isIOS()) return "";
+  var how = installEvt ? '<button class="btn" id="instBtn">Install app</button>' : '<div class="mu">Tap <b>Share</b> <span style="font-size:16px">⎋</span> then <b>Add to Home Screen</b>.</div>';
+  return '<div class="card mt" style="display:flex;gap:12px;align-items:center;background:linear-gradient(135deg,#eef0ff,#fff)"><img src="icon-192.png" alt="" style="width:52px;height:52px;border-radius:14px;border:1px solid var(--line)"><div class="sp"><b class="fd" style="font-size:17px">Get the ZEALON app</b><div class="mu" style="margin-bottom:6px">Opens full screen from your home screen, with live results.</div>'+how+'</div><button class="close" id="instX" aria-label="Hide">×</button></div>';
+}
+function doInstall(){
+  if(!installEvt) return;
+  installEvt.prompt();
+  installEvt.userChoice.then(function(){ installEvt = null; if(view==="home") renderHome(); });
+}
+window.addEventListener("beforeinstallprompt", function(e){ e.preventDefault(); installEvt = e; if(view==="home") renderHome(); });
+window.addEventListener("appinstalled", function(){ installEvt = null; toast("ZEALON app installed"); if(view==="home") renderHome(); });
+if("serviceWorker" in navigator && (location.protocol==="https:" || location.hostname==="localhost")){
+  window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
+}
 
 /* ---------- start ---------- */
 $("#lgSchool").src = LOGO.school; $("#lgSchool2").src = LOGO.school; $("#lgZealon").src = LOGO.zealon;
